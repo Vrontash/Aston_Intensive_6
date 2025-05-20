@@ -1,5 +1,6 @@
 package org.example.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -8,14 +9,23 @@ import java.time.LocalDateTime;
 
 public class UserDto {
 
+    @Schema(description = "User's ID", example = "1")
     private Long id;
+
+    @Schema(description = "User's full name", example = "John Doe")
     @NotNull
     private String name;
+
+    @Schema(description = "User's email", example = "example@example.ru")
     @NotNull
     @Email(regexp = "\\w+@\\w+\\.\\w+", message = "Invalid Email")
     private String email;
+
+    @Schema(description = "User's age", example = "23")
     @Min(value = 1, message = "Age must be at least 1")
     private int age;
+
+    @Schema(description = "User's time of creation", example = "2025-05-12T13:16:24.775222")
     private LocalDateTime createdAt;
 
     public UserDto(){}
