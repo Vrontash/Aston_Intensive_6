@@ -8,10 +8,19 @@ import org.example.annotations.swagger.UserBadRequest;
 import org.example.annotations.swagger.UserNotFoundResponse;
 import org.example.dto.UserDto;
 import org.example.service.UserService;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/users")
@@ -25,23 +34,40 @@ public class UserController {
     @UserBadRequest //Кастомная аннотация для документации метода с не пройденной валидацией
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)//Код 201
-    public UserDto saveUser(@Valid @RequestBody UserDto userDto){
-        return userService.saveUser(userDto);
+    public EntityModel<UserDto> saveUser(@Valid @RequestBody UserDto userDto){
+        return EntityModel.of(userService.saveUser(userDto),
+                                getSelfLink(userDto.getId()),
+                                getUpdateLink(),
+                                getDeleteLink(userDto.getId()),
+                                getUsersLink());
     }
 
     @Operation(summary = "Get user by ID", description = "Returns a single user")
     @OkUserResponse //Кастомная аннотация для документации метода с успешной работой над User'ом
     @UserNotFoundResponse //Кастомная аннотация для документации метода с не найденным User'ом
     @GetMapping("/{id}")
-    public UserDto findUserById(@PathVariable("id") Long id){
-        return userService.findUserById(id);
+    public EntityModel<UserDto> findUserById(@PathVariable("id") Long id){
+        return EntityModel.of(userService.findUserById(id),
+                                getSelfLink(id),
+                                getUpdateLink(),
+                                getDeleteLink(id),
+                                getUsersLink());
     }
 
     @Operation(summary = "Get all users", description = "Returns all users")
     @OkUsersResponse //Кастомная аннотация для документации метода с успешной работой поиска всех User'ов
     @GetMapping
-    public List<UserDto> findAllUsers(){
-        return userService.findAllUsers();
+    public CollectionModel<EntityModel<UserDto>> findAllUsers(){
+        //Добавление каждому UserDto в Users нужных ссылок
+        List<EntityModel<UserDto>> users = userService.findAllUsers().stream()
+                .map(user -> EntityModel.of(user,
+                                            getSelfLink(user.getId()),
+                                            getUpdateLink(),
+                                            getDeleteLink(user.getId())))
+                .toList();
+        return CollectionModel.of(users,
+                                    getUsersLink().withSelfRel(),
+                                    getCreateLink(new UserDto()));
     }
 
     @Operation(summary = "Update single user", description = "Updates user's information")
@@ -49,15 +75,35 @@ public class UserController {
     @UserNotFoundResponse
     @UserBadRequest
     @PutMapping
-    public UserDto updateUser(@Valid @RequestBody UserDto userDto){
-        return userService.updateUser(userDto);
+    public EntityModel<UserDto> updateUser(@Valid @RequestBody UserDto userDto){
+        return EntityModel.of(userService.updateUser(userDto),
+                                getSelfLink(userDto.getId()),
+                                getDeleteLink(userDto.getId()),
+                                getUsersLink());
     }
 
     @Operation(summary = "Delete user by Id", description = "Deletes single user")
     @UserNotFoundResponse
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)//Код 204
-    public void deleteUser(@PathVariable("id") Long id){
+    public ResponseEntity<Void> deleteUser(@PathVariable("id") Long id){
         userService.deleteUser(id);
+        return ResponseEntity.noContent().header(HttpHeaders.LINK, getUsersLink().toString()).build();
+    }
+
+    private Link getSelfLink(Long id){
+        return linkTo(methodOn(UserController.class).findUserById(id)).withSelfRel().withType("GET");
+    }
+    private Link getUpdateLink(){
+        return WebMvcLinkBuilder.linkTo(methodOn(UserController.class).updateUser(new UserDto())).withRel("update").withType("PUT");
+    }
+    private Link getDeleteLink(Long id){
+        return WebMvcLinkBuilder.linkTo(methodOn(UserController.class).deleteUser(id)).withRel("delete").withType("DELETE");
+    }
+    private Link getUsersLink(){
+        return linkTo(methodOn(UserController.class).findAllUsers()).withRel("users").withType("GET");
+    }
+    private Link getCreateLink(UserDto userDto){
+        return linkTo(methodOn(UserController.class).saveUser(userDto)).withRel("create").withType("POST");
     }
 }
