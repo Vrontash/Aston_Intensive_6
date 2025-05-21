@@ -2,10 +2,7 @@ package org.example.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
-import org.example.annotations.swagger.OkUserResponse;
-import org.example.annotations.swagger.OkUsersResponse;
-import org.example.annotations.swagger.UserBadRequest;
-import org.example.annotations.swagger.UserNotFoundResponse;
+import org.example.annotations.swagger.*;
 import org.example.dto.UserDto;
 import org.example.service.UserService;
 import org.springframework.hateoas.CollectionModel;
@@ -31,6 +28,7 @@ public class UserController {
     }
 
     @Operation(summary = "Create user", description = "Creates a new user")
+    @CreatedUserResponse
     @UserBadRequest //Кастомная аннотация для документации метода с не пройденной валидацией
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)//Код 201
@@ -43,7 +41,7 @@ public class UserController {
     }
 
     @Operation(summary = "Get user by ID", description = "Returns a single user")
-    @OkUserResponse //Кастомная аннотация для документации метода с успешной работой над User'ом
+    @OkFindUserResponse //Кастомная аннотация для документации метода с успешной работой над User'ом
     @UserNotFoundResponse //Кастомная аннотация для документации метода с не найденным User'ом
     @GetMapping("/{id}")
     public EntityModel<UserDto> findUserById(@PathVariable("id") Long id){
@@ -55,7 +53,7 @@ public class UserController {
     }
 
     @Operation(summary = "Get all users", description = "Returns all users")
-    @OkUsersResponse //Кастомная аннотация для документации метода с успешной работой поиска всех User'ов
+    @OkFindUsersResponse //Кастомная аннотация для документации метода с успешной работой поиска всех User'ов
     @GetMapping
     public CollectionModel<EntityModel<UserDto>> findAllUsers(){
         //Добавление каждому UserDto в Users нужных ссылок
@@ -71,7 +69,7 @@ public class UserController {
     }
 
     @Operation(summary = "Update single user", description = "Updates user's information")
-    @OkUserResponse
+    @OkUpdateUserResponse
     @UserNotFoundResponse
     @UserBadRequest
     @PutMapping
@@ -83,6 +81,7 @@ public class UserController {
     }
 
     @Operation(summary = "Delete user by Id", description = "Deletes single user")
+    @NoContentDeleteResponse
     @UserNotFoundResponse
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)//Код 204
@@ -104,6 +103,6 @@ public class UserController {
         return linkTo(methodOn(UserController.class).findAllUsers()).withRel("users").withType("GET");
     }
     private Link getCreateLink(UserDto userDto){
-        return linkTo(methodOn(UserController.class).saveUser(userDto)).withRel("create").withType("POST");
+        return linkTo(methodOn(UserController.class).saveUser(userDto)).withRel("save").withType("POST");
     }
 }
